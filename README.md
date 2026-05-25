@@ -53,6 +53,16 @@ Each step has a standard prompt pattern. Sections 4–9 walk through each one.
 
 A few things need to be running locally before the AI can help. Knock these out in order — none of them take long, but skipping one will make later prompts fail in confusing ways.
 
+### Initial Developer Setup
+
+Before proceeding with the sections below, complete the **[CMS Developers Setup Guide](CMS-DEVS-SETUP-GUIDE.md)**. This one-time guide covers:
+
+- Installing Claude Code CLI and VS Code extension
+- Configuring Figma MCP server integration
+- Setting up Module Builder and Page Builder agents
+
+This must be completed before building any modules or pages with the AI.
+
 ### 3.1 Boot the local environment
 
 The AI can't debug Docker issues over a chat, so get Lando up yourself first:
