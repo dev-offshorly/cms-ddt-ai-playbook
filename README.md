@@ -55,7 +55,7 @@ A few things need to be running locally before the AI can help. Knock these out 
 
 ### Initial Developer Setup
 
-Before proceeding with the sections below, complete the **[CMS Developers Setup Guide](CMS-DEVS-SETUP-GUIDE.md)**. This one-time guide covers:
+Before proceeding with the sections below, complete the **[CMS Developers Setup Guide](CMS-Devs-setup_guide.md)**. This one-time guide covers:
 
 - Installing Claude Code CLI and VS Code extension
 - Configuring Figma MCP server integration
