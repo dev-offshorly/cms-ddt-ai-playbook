@@ -1,5 +1,5 @@
 # CMS Devs x DDT AI Playbook
-![Version](https://img.shields.io/badge/version-v1.1-blue)
+![Version](https://img.shields.io/badge/version-v1.2-blue)
 
 This builds on the broader work in the
 **[Offshorly AI Excellence Playbook](https://github.com/maekooffshorly/ai-excellence-playbook)**. Where the linked repo covers the company's full system, this repo contains specific guidance for the Offshorly CMS Developers and DDT (Design Dream Team).
