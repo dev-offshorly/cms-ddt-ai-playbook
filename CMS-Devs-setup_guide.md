@@ -322,7 +322,7 @@ npm install -g @anthropic-ai/claude-code
 
 - [Claude Code Documentation](https://claude.ai/help)
 - [MCP Documentation](https://modelcontextprotocol.io)
-- [CMS AI Playbook](https://github.com/dev-offshorly/cms-ai-playbook)
+- [CMS AI Playbook](https://github.com/dev-offshorly/cms-ddt-ai-playbook/)
 - [Basic Techniques Guide](https://github.com/maekooffshorly/ai-excellence-playbook/blob/main/docs/08-basic-techniques.md)
 
 ---
