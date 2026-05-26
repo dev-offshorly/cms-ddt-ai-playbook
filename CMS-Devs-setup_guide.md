@@ -47,16 +47,6 @@ You should see a version number (e.g., `v1.2.3`). If this fails, see [Troublesho
 
 > **Note:** Claude Code includes built-in access to Claude Sonnet 4.6 and Claude Opus 4.7 via the Team Plan — no separate API key configuration needed.
 
-### 1c. Verify Installation
-
-In the Claude Code panel, run:
-
-```
-claude --version
-```
-
-Both the CLI and extension should show matching version numbers.
-
 ---
 
 ## Step 2: Connect Figma MCP Server
@@ -121,66 +111,45 @@ Agents are specialized Claude Code prompts that guide AI assistance for specific
 1. **Module Builder Agent** — helps design, build, and test reusable CMS modules
 2. **Page Builder Agent** — helps structure and build full CMS pages using existing modules
 
-### 3a. Access the Claude CLI
+### 3a. Create the Module Builder Agent
 
-Open your terminal and confirm the Claude CLI is accessible:
-
-```bash
-claude --version
-```
-
-### 3b. List Available Agents
-
-View your current agents:
-
-```bash
-claude agents
-```
-
-You'll see a list of any existing agents (this might be empty on first setup).
-
-### 3c. Create the Module Builder Agent
-
-1. **Open the Module Builder agent prompt:**
+1. **Open the agent prompt file:**
    ```bash
    cat agents/wp-module-builder.md
    ```
 
-2. **Create the agent via CLI:**
-   ```bash
-   claude agents add --name "CMS Module Builder" --description "Build and test reusable CMS modules" --prompt-file agents/wp-module-builder.md
-   ```
+2. **Create the agent in Claude Code:**
+   - Open Claude Code in VS Code
+   - Click the **Agents** tab in the left sidebar
+   - Click the **+** button to create a new agent
+   - Fill in:
+     - **Name:** `CMS Module Builder`
+     - **Description:** `Build and test reusable CMS modules with design and accessibility in mind`
+   - Copy the entire contents of `agents/wp-module-builder.md` and paste it into the **Prompt** field
+   - Click **Create**
 
-   Alternatively, use the interactive prompt:
-   ```bash
-   claude agents add
-   ```
-   Then fill in:
-   - **Name:** `CMS Module Builder`
-   - **Description:** `Build and test reusable CMS modules with design and accessibility in mind`
-   - **Prompt file:** `agents/wp-module-builder.md`
-
-3. **Verify it was created:**
-   ```bash
-   claude agents
-   ```
-   You should see `CMS Module Builder` in the list.
-
-### 3d. Create the Page Builder Agent
+### 3b. Create the Page Builder Agent
 
 Repeat the process for the Page Builder agent:
 
-1. **Create the agent:**
+1. **Open the agent prompt file:**
    ```bash
-   claude agents add --name "CMS Page Builder" --description "Build full CMS pages using modular components" --prompt-file agents/wp-page-builder.md
+   cat agents/wp-page-builder.md
    ```
 
-2. **Verify both agents are now active:**
-   ```bash
-   claude agents
-   ```
+2. **Create the agent in Claude Code:**
+   - Click the **+** button in the Agents tab
+   - Fill in:
+     - **Name:** `CMS Page Builder`
+     - **Description:** `Build full CMS pages using modular components`
+   - Copy the entire contents of `agents/wp-page-builder.md` and paste it into the **Prompt** field
+   - Click **Create**
 
-### 3e. Invoke Agents in Claude Code
+### 3c. Verify Both Agents Were Created
+
+In the Claude Code Agents tab, you should see both `CMS Module Builder` and `CMS Page Builder` listed.
+
+### 3d. Invoke Agents in Claude Code
 
 Once agents are set up, you can invoke them directly in Claude Code:
 
