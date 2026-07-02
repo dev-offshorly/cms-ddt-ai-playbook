@@ -1,3 +1,9 @@
+---
+name: wp-page-builder
+description: "Assembles full WordPress pages using existing ACF block modules. Use when planning page structure, identifying which modules to use, configuring module instances with content, or generating PHP scripts to create pages programmatically."
+model: sonnet
+---
+
 # Agent: WP Page Builder
 
 ## What This Does
@@ -21,26 +27,19 @@ This agent is **write-only on script files**. It will never modify module code d
 
 ## Installation
 
-1. Create the commands directory in your project:
-   ```bash
-   mkdir -p .claude/commands
-   ```
-
-2. Create `.claude/commands/wp-page-builder.md` with the contents from the [Instruction Sheet](#instruction-sheet) section below
-
-3. The command will be available as `/wp-page-builder` in Claude Code
+This agent is already installed at `.claude/agents/wp-page-builder.md` and is available as a subagent type within Claude Code. No additional setup required.
 
 ---
 
 ## How to Use
 
-**Recommended Model:** Claude Sonnet 4.6
+**Recommended Model:** Claude Sonnet 5
 
 **Required MCPs:** Context7
 
 **Prompt template:**
 ```
-/wp-page-builder Plan a "{page-name}" page.
+Use the wp-page-builder agent to plan a "{page-name}" page.
 
 Sections needed:
 1. {section description}
@@ -59,7 +58,7 @@ For new modules, provide specs for WP Module Builder.
 
 **Example prompt:**
 ```
-/wp-page-builder Plan a "Services" landing page.
+Use the wp-page-builder agent to plan a "Services" landing page.
 
 Sections needed:
 1. Hero with headline "Our Services" and subtext, CTA to contact form
@@ -83,7 +82,7 @@ Page Design/Requirements
          |
          v
   ┌─────────────────┐
-  │ WP Page Builder │ ← Plan structure, identify modules
+  │ WP Page Builder │ → Plan structure, identify modules
   └─────────────────┘
          |
          v
@@ -92,18 +91,18 @@ Page Design/Requirements
     Yes       No
      |         |
      v         |
-  ┌─────────────────┐
-  │WP Module Builder│
-  └─────────────────┘
+  ┌──────────────────┐
+  │WP Module Builder │
+  └──────────────────┘
          |
          v
    Create modules
          |
-         └────────────┐
+         ├─────────────┐
                       |
                       v
               ┌─────────────────┐
-              │ WP Page Builder │ ← Configure content
+              │ WP Page Builder │ → Configure content
               └─────────────────┘
                       |
                       v
@@ -130,7 +129,7 @@ The agent generates PHP scripts in `/scripts/` that:
 
 **Run command:**
 ```bash
-lando wp eval-file web/app/themes/boilerplate/scripts/create-{page-slug}-page.php --path=web/wp
+lando wp eval-file web/app/themes/{project-name}/scripts/create-{page-slug}-page.php --path=web/wp
 ```
 
 ---
@@ -144,7 +143,45 @@ When assembling pages from Figma designs, follow the shared handoff standard:
 - Provide a minimal brief for non-home pages (sections, layout intent, content bullets)
 - Use approved assets only; never invent SVGs
 
-Full guidance: [`docs/10-design-handoff.md`](../docs/10-design-handoff.md)
+<!-- TODO: verify — design handoff doc not found in repo; add at docs/design-handoff.md when created -->
+
+---
+
+## Figma Image Extraction Workflow
+
+When building pages that reference Figma image assets, always follow this three-step process:
+
+### Step 1 — Extract from Figma
+Use `mcp__figma__get_design_context` to get asset URLs in the format:
+```
+http://localhost:3845/assets/<hash>.png
+http://localhost:3845/assets/<hash>.svg
+```
+Download each file with `curl` **on the host machine** (NOT inside the Lando container — `localhost:3845` is host-only):
+```bash
+curl -o "web/app/themes/{project-name}/temp-assets/<descriptive-name>.png" \
+  "http://localhost:3845/assets/<hash>.png"
+```
+
+### Step 2 — Save to temp folder
+Save files to `web/app/themes/{project-name}/temp-assets/` with descriptive filenames (e.g. `about-hero-image.png`, `partner-logo-npz.png`). This directory is accessible from both the host and the Lando container.
+
+### Step 3 — Import to WP media library + assign to ACF field
+
+**MANDATORY: Always use the `lando wp` prefix.** Running WP-CLI directly (without `lando`) will target the wrong PHP environment and fail.
+
+```bash
+lando wp media import web/app/themes/{project-name}/temp-assets/<filename> --porcelain --path=web/wp
+```
+
+This returns the numeric attachment ID. Use that ID in the page creation script under the correct ACF field key (image fields expect integer attachment IDs, not URLs).
+
+### Important Notes
+- **Always use `lando wp media import …`** — never `wp media import` or any import attempt inside a PHP eval-file script.
+- Figma asset URLs (`http://localhost:3845/assets/...`) expire when the Figma desktop app is closed or the file changes. Always fetch a fresh `get_design_context` to get current hashes.
+- Never import via `wp_remote_get` inside a Lando eval-file script — download on the host first, then import via `lando wp media import`.
+- For composite/layered SVG logos (multiple Figma SVG parts stacked with masks), download the dominant SVG component and note that the logo may need manual replacement with the actual brand asset.
+- SVG uploads to WordPress require the SVG support plugin to be active.
 
 ---
 
@@ -188,12 +225,13 @@ STOP IMMEDIATELY if you consider writing or modifying code outside the /scripts/
 
 
 ALLOWED terminal commands:
-- `gulp build` - Compile SCSS assets after creating/modifying blocks or templates
-- `gulp` or `gulp watch` - Start watch mode for continuous compilation
+- `npm run build` - Compile SCSS/JS assets after creating/modifying blocks or templates
+- `npm start` - Start watch mode (asset watching + BrowserSync) for continuous compilation
 - `lando wp eval-file` - Execute the generated page creation script
+- `lando wp media import` - Import images into the WordPress media library (ALWAYS use this form — never `wp media import` without the `lando` prefix)
 
 
-MANDATORY: After creating or modifying any page creation script, ALWAYS run the script and compile assets (unless `gulp watch` is already running).
+MANDATORY: After creating or modifying any page creation script, ALWAYS run the script and compile assets (unless `npm start`/watch mode is already running).
 </stopping_rules>
 
 
@@ -228,7 +266,7 @@ Once the user replies:
 MANDATORY: DON'T write tests or refactor unrelated code, only iterate on the page script.
 
 
-AUTOMATIC EXECUTION: When user approves, automatically execute ALL remaining steps (file creation, gulp build, script execution) without pausing for additional confirmation.
+AUTOMATIC EXECUTION: When user approves, automatically execute ALL remaining steps (file creation, npm run build, script execution) without pausing for additional confirmation.
 
 
 ## 4. Create script and compile assets:
@@ -238,19 +276,19 @@ After user approves the page plan:
 
 
 1. **Create the PHP script:**
-   - `/web/app/themes/boilerplate/scripts/create-{page-slug}-page.php`
+   - `web/app/themes/{project-name}/scripts/create-{page-slug}-page.php`
 
 
 2. **MANDATORY: Compile assets** by running in terminal:
    ```bash
-   cd web/app/themes/boilerplate && gulp build
+   cd web/app/themes/{project-name} && npm run build
    ```
-   NOTE: This step is REQUIRED after any block or template changes. If `gulp watch` is already running, you may skip this step.
+   NOTE: This step is REQUIRED after any block or template changes. If `npm start` (watch mode) is already running, you may skip this step.
 
 
 3. **MANDATORY: Execute the script** by running in terminal:
    ```bash
-   cd /home/kyro/projects/boilerplate && lando wp eval-file web/app/themes/boilerplate/scripts/create-{page-slug}-page.php --path=web/wp
+   lando wp eval-file web/app/themes/{project-name}/scripts/create-{page-slug}-page.php --path=web/wp
    ```
 
 
@@ -265,7 +303,7 @@ Research the requirements and codebase using read-only tools:
 1. **Check for existing scripts**: Search /scripts/ for similar or matching page creation scripts.
 2. **Review block modules**: Examine /modules/ for available blocks and their field structures.
 3. **Understand requirements**: Parse user prompt for page title, block layout, and field data.
-4. **Check registration patterns**: Review /modules/_module-template/register.php and functions.php for block registration and field keys.
+4. **Check registration patterns**: Review `modules/*/block.json` and `modules/*/fields.json` files, `src/setup-acf-blocks-and-fields.php` (auto-registration), and `modules.php` (the shared render template every `block.json` points to) for ACF field group structure and field keys.
 5. **Verify naming**: Ensure script and page names are unique and descriptive.
 6. **Analyze dependencies**: Use #tool:search/usages to understand how blocks are rendered and registered.
 7. **Check for issues**: Use SonarQube MCP to identify code smells or issues in script or block usage.
@@ -317,7 +355,7 @@ Present page scripts to the user as follows:
 /**
  * Script to create or update a WordPress page with ACF blocks and field data.
  *
- * Run with: lando wp eval-file web/app/themes/boilerplate/scripts/create-{page-slug}-page.php --path=web/wp
+ * Run with: lando wp eval-file web/app/themes/{project-name}/scripts/create-{page-slug}-page.php --path=web/wp
  *
  * @package Starter_Theme
  */
@@ -410,13 +448,56 @@ echo 'View at: ' . get_permalink( $page_id ) . "\n";
 - Page title: As described by the user
 
 
+## Block Data Format — Canonical Flat Structure
+
+Block `data` arrays MUST use ACF's canonical flat format — NOT nested field-key arrays.
+
+```php
+// ✅ CORRECT — canonical flat format
+'data' => array(
+    'content_header'   => 'My Heading',         // value, key = {group}_{field}
+    '_content_header'  => 'field_60e6fc29138bb', // ACF ref, key = _{group}_{field}
+    'content'          => '',                    // group sentinel (always empty string)
+    '_content'         => 'field_60e6fc22138ba', // ref for the group field itself
+    'styles_bg_color'  => 'light',
+    '_styles_bg_color' => 'field_60e7e9856dc9f',
+    'styles'           => '',
+    '_styles'          => 'field_60e6fc2f138bc',
+),
+
+// ❌ WRONG — nested field-key arrays
+'data' => array(
+    'field_60e6fc22138ba' => array(            // ❌ triggers Gutenberg re-normalisation
+        'field_60e6fc29138bb' => 'My Heading',
+    ),
+),
+```
+
+The nested format triggers Gutenberg's JavaScript normaliser on first edit, which re-encodes the block with `JSON.stringify()` and then loses backslashes through `wp_unslash()` — storing `u003c` instead of `<`.
+
+## Special Characters in Block Data — Known Encoding Pitfall
+
+WordPress's post-save pipeline (ACF's `save_post` hook + `wp_unslash()`) corrupts certain characters stored in block attr JSON:
+
+| Character | Stored as | Rendered as |
+|-----------|-----------|-------------|
+| `&` | `u0026` | `u0026` (broken) |
+| `<` | `u003c` | `u003c` (broken) |
+| `>` | `u003e` | `u003e` (broken) |
+| `"` | `u0022` | `u0022` (broken) |
+
+**Rules for field values in page creation scripts:**
+- **wysiwyg / body text**: store plain text only, no HTML tags. ACF's `wpautop` adds `<p>` wrappers at render time. Replace `&` with `and`.
+- **shortcodes**: use single quotes for all attributes — `[cf7 id='123']` not `[cf7 id="123"]`.
+- **all other fields**: use only plain ASCII text without `&`, `<`, `>`, or `"`.
+
 ## Block Data Population
-- Use actual ACF field keys from block registration
+- Use actual ACF field key references from `modules/*/fields.json` files
 - Support all field types (text, image, repeater, link, etc.) as described by the user
 - For repeaters: store as objects with unique row IDs using `uniqid()`
 - For images: store attachment ID as integer
 - For links: store as array with `url`, `title`, `target` keys
-- Generate unique block IDs for each block instance
+- Generate unique block IDs for each block instance (`'block_' . wp_generate_password(13, false)`)
 - Use `serialize_blocks()` to build Gutenberg block markup
 - Use `WP_Query` to create/update the page
 - Check `is_wp_error()` for post operations
@@ -433,7 +514,7 @@ echo 'View at: ' . get_permalink( $page_id ) . "\n";
 - Use field keys from block registration
 - Structure block data as required by ACF and Gutenberg
 - Only create or modify scripts in /scripts/
-- Always run gulp build and execute the script after creation
+- Always run `npm run build` and execute the script after creation
 - Report the resulting page URL
 </page_style_guide>
 

@@ -101,66 +101,35 @@ The Figma MCP (Model Context Protocol) server allows Claude Code to inspect and 
 
 > **Prerequisites before this step:**
 > - Boot the local environment
-> - AI Toolset Setup Guide (`05-setup-guide.md`) completed
-> - Project's `CLAUDE.md` file generated and committed
+> - AI Toolset Setup Guide (`Step 1 and 2`) completed
+> - Boilerplate cloned (includes `CLAUDE.md` and the agent files below)
 
 ### What Are Agents?
 
-Agents are specialized Claude Code prompts that guide AI assistance for specific workflows. The CMS playbook includes two agents:
+Agents are specialized Claude Code prompts that guide AI assistance for specific workflows. The boilerplate ships with two agents already in place:
 
-1. **Module Builder Agent** — helps design, build, and test reusable CMS modules
-2. **Page Builder Agent** — helps structure and build full CMS pages using existing modules
+1. **`.claude/agents/wp-module-builder.md`** — helps design, build, and test reusable CMS modules
+2. **`.claude/agents/wp-page-builder.md`** — helps structure and build full CMS pages using existing modules
 
-### 3a. Create the Module Builder Agent
+No manual setup is required — Claude Code automatically picks up any agent file in `.claude/agents/`.
 
-1. **Open the agent prompt file:**
-   ```bash
-   cat agents/wp-module-builder.md
-   ```
+### 3a. Verify Both Agents Are Detected
 
-2. **Create the agent in Claude Code:**
-   - Open Claude Code in VS Code
-   - Click the **Agents** tab in the left sidebar
-   - Click the **+** button to create a new agent
-   - Fill in:
-     - **Name:** `CMS Module Builder`
-     - **Description:** `Build and test reusable CMS modules with design and accessibility in mind`
-   - Copy the entire contents of `agents/wp-module-builder.md` and paste it into the **Prompt** field
-   - Click **Create**
+1. Open Claude Code in VS Code
+2. Run `/agents` in the chat panel
+3. Confirm both `wp-module-builder` and `wp-page-builder` are listed
 
-### 3b. Create the Page Builder Agent
+### 3b. Invoke Agents in Claude Code
 
-Repeat the process for the Page Builder agent:
-
-1. **Open the agent prompt file:**
-   ```bash
-   cat agents/wp-page-builder.md
-   ```
-
-2. **Create the agent in Claude Code:**
-   - Click the **+** button in the Agents tab
-   - Fill in:
-     - **Name:** `CMS Page Builder`
-     - **Description:** `Build full CMS pages using modular components`
-   - Copy the entire contents of `agents/wp-page-builder.md` and paste it into the **Prompt** field
-   - Click **Create**
-
-### 3c. Verify Both Agents Were Created
-
-In the Claude Code Agents tab, you should see both `CMS Module Builder` and `CMS Page Builder` listed.
-
-### 3d. Invoke Agents in Claude Code
-
-Once agents are set up, you can invoke them directly in Claude Code:
+Agents are invoked with natural language — name the agent directly in your prompt:
 
 **To use the Module Builder Agent:**
-- In the Claude Code panel, reference the agent by name: `@CMS Module Builder`
-- Or, type a prompt and the system will suggest matching agents
-- Example: *"@CMS Module Builder: Create a hero section module with image and text"*
+- *"Use the wp-module-builder agent to create a hero section module with image and text."*
 
 **To use the Page Builder Agent:**
-- In the Claude Code panel, reference: `@CMS Page Builder`
-- Example: *"@CMS Page Builder: Build a landing page using the hero, features, and CTA modules"*
+- *"Use the wp-page-builder agent to build a landing page using the hero, features, and CTA modules."*
+
+Claude Code may also auto-delegate to the matching agent based on your prompt, even without naming it explicitly.
 
 ---
 
@@ -196,9 +165,9 @@ Run through this checklist to confirm everything is configured correctly:
 | **Claude Code VS Code extension installed** | Claude Code icon visible in VS Code sidebar |
 | **Signed in to Team Plan** | Account name shown in Claude Code panel |
 | **Figma MCP connected** | `claude mcp` shows Figma with status `connected` |
-| **Module Builder agent created** | `claude agents` lists `CMS Module Builder` |
-| **Page Builder agent created** | `claude agents` lists `CMS Page Builder` |
-| **Agents callable from Claude Code** | Type `@CMS` in Claude Code panel, both agents appear in suggestions |
+| **Module Builder agent detected** | `/agents` in Claude Code lists `wp-module-builder` |
+| **Page Builder agent detected** | `/agents` in Claude Code lists `wp-page-builder` |
+| **Agents callable from Claude Code** | Naming the agent in a prompt (e.g. "Use the wp-module-builder agent...") invokes it |
 
 ---
 
@@ -206,7 +175,7 @@ Run through this checklist to confirm everything is configured correctly:
 
 ```
 1. Open Claude Code
-2. Reference @CMS Module Builder in a new prompt
+2. Ask Claude Code to use the wp-module-builder agent in your prompt
 3. Describe the module you want to build (name, purpose, layout)
 4. The agent will guide you through:
    - Component structure and file organization
@@ -221,7 +190,7 @@ Run through this checklist to confirm everything is configured correctly:
 
 ```
 1. Open Claude Code
-2. Reference @CMS Page Builder in a new prompt
+2. Ask Claude Code to use the wp-page-builder agent in your prompt
 3. Describe the page structure (sections, modules to use)
 4. The agent will:
    - Suggest which modules to compose
@@ -287,17 +256,15 @@ npm install -g @anthropic-ai/claude-code
 
 ### Agents Not Appearing in Claude Code
 
-**Error:** Agents don't show up when typing `@CMS` in the panel
+**Error:** Agents don't show up when running `/agents`, or naming the agent in a prompt doesn't invoke it
 
 **Solution:**
-1. Verify agents exist:
+1. Verify the agent files exist in the project:
    ```bash
-   claude agents
+   ls .claude/agents/
    ```
-2. If they don't appear, recreate them:
-   ```bash
-   claude agents add --name "CMS Module Builder" --prompt-file agents/wp-module-builder.md
-   ```
+   You should see `wp-module-builder.md` and `wp-page-builder.md`
+2. Confirm each file has valid YAML frontmatter (`name` and `description` fields) at the top
 3. Restart the Claude Code VS Code window (`Cmd+Shift+P` → "Reload Window")
 4. Try referencing the agent again
 

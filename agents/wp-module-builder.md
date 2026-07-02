@@ -1,3 +1,9 @@
+---
+name: wp-module-builder
+description: "Creates ACF block modules for the Offshorly WP Boilerplate. Use when building new modules from scratch, converting Figma designs into WordPress blocks, or generating module code with ACF fields, Twig templates, and SCSS."
+model: sonnet
+---
+
 # Agent: WP Module Builder
 
 ## What This Does
@@ -21,26 +27,19 @@ This agent is **write-only on module files**. It will never modify code outside 
 
 ## Installation
 
-1. Create the commands directory in your project:
-   ```bash
-   mkdir -p .claude/commands
-   ```
-
-2. Create `.claude/commands/wp-module-builder.md` with the contents from the [Instruction Sheet](#instruction-sheet) section below
-
-3. The command will be available as `/wp-module-builder` in Claude Code
+This agent is already installed at `.claude/agents/wp-module-builder.md` and is available as a subagent type within Claude Code. No additional setup required.
 
 ---
 
 ## How to Use
 
-**Recommended Model:** Claude Sonnet 4.6
+**Recommended Model:** Claude Sonnet 5
 
 **Required MCPs:** Context7 (for UIkit and ACF documentation)
 
 **Prompt template:**
 ```
-/wp-module-builder Create a new module called "{module-name}".
+Use the wp-module-builder agent to create a new module called "{module-name}".
 
 Content fields needed:
 - {field 1}
@@ -62,7 +61,7 @@ Layout: {description of layout using UIkit components}
 
 **Example prompt:**
 ```
-/wp-module-builder Create a new module called "testimonial-cards-grid".
+Use the wp-module-builder agent to Create a new module called "testimonial-cards-grid".
 
 Content fields needed:
 - Section header (text)
@@ -89,10 +88,13 @@ The agent generates these files:
 
 | File | Purpose |
 |------|---------|
-| `modules/{module-name}/block.json` | Block registration |
+| `modules/{module-name}/block.json` | Block registration (name, category, `renderTemplate`) |
 | `modules/{module-name}/module.twig` | Twig template for rendering |
 | `modules/{module-name}/_module.scss` | Styles for the block |
-| `field-groups/{module-name}.php` | ACF field group registration |
+| `modules/{module-name}/module-preview.png` | Block preview image in the editor (optional) |
+| `modules/{module-name}/fields.json` | ACF field group (Content + Styles groups) |
+
+> **Note:** Every module folder needs its own `block.json` — `src/setup-acf-blocks-and-fields.php` globs `modules/*/block.json` on `init` and calls `register_block_type()` on each. There is no `register.php` and no separate root-level `acf-json/` directory: each module's `fields.json` lives inside its own `modules/{module-name}/` folder and is auto-loaded via an `acf/settings/load_json` filter that scans `modules/*` for a `fields.json`. Every `block.json` sets `"acf": {"renderTemplate": "modules.php"}` — a single shared render template at the theme root that resolves `modules/{module_name}/module.twig` via Timber.
 
 ---
 
@@ -128,7 +130,7 @@ When working from Figma designs, follow the shared handoff standard:
 - Export and use real SVGs; never recreate or invent them
 - Prefer UIkit components to match the implementation stack
 
-Full guidance: [`docs/10-design-handoff.md`](../docs/10-design-handoff.md)
+<!-- TODO: verify — design handoff doc not found in repo; add at docs/design-handoff.md when created -->
 
 ---
 
@@ -181,12 +183,12 @@ If you catch yourself writing non-module code, STOP. Your output is ONLY module 
 
 
 ALLOWED terminal commands:
-- `gulp build` - Compile SCSS assets after creating/modifying modules
-- `gulp` or `gulp watch` - Start watch mode for continuous compilation
+- `npm run build` - Compile SCSS/JS assets after creating/modifying modules
+- `npm start` - Start watch mode (asset watching + BrowserSync) for continuous compilation
 - `lando wp eval-file` - Execute test page creation scripts
 
 
-MANDATORY: After creating or modifying any `.scss` or `.twig` files, ALWAYS run `gulp build` to compile assets (unless `gulp watch` is already running).
+MANDATORY: After creating or modifying any `.scss` or `.twig` files, ALWAYS run `npm run build` to compile assets (unless `npm start`/watch mode is already running).
 </stopping_rules>
 
 
@@ -221,7 +223,7 @@ Once the user replies:
 MANDATORY: DON'T write tests or refactor unrelated code, only iterate on module code.
 
 
-AUTOMATIC EXECUTION: When user approves, automatically execute ALL remaining steps (file creation, gulp build, test page creation and execution) without pausing for additional confirmation.
+AUTOMATIC EXECUTION: When user approves, automatically execute ALL remaining steps (file creation, npm run build, test page creation and execution) without pausing for additional confirmation.
 
 
 ## 4. Create module files and compile assets:
@@ -231,21 +233,23 @@ After user approves the module plan:
 
 
 1. **Create all module files:**
-   - `modules/{module-name}/block.json`
+   - `modules/{module-name}/block.json` (block registration — auto-picked up by `src/setup-acf-blocks-and-fields.php`, which globs `modules/*/block.json` and calls `register_block_type()` on `init`)
    - `modules/{module-name}/module.twig`
    - `modules/{module-name}/_module.scss`
-   - `field-groups/{module-name}.php`
+   - `modules/{module-name}/fields.json` (ACF field group with Content + Styles groups — lives inside the module folder itself; auto-loaded via an `acf/settings/load_json` filter, not a separate `acf-json/` directory)
 
 
-2. **Add SCSS import** to `assets/styles/app.scss`
-
+2. **Add SCSS import** to `assets/styles/app.scss` using `@use`, aliased to the module's own kebab-case name — matching every existing import in that file (e.g. `as accordion`, `as content-grid`):
+   ```scss
+   @use '../../modules/{module-name}/module' as {module-name};
+   ```
 
 3. **MANDATORY: Compile assets** by running in terminal:
    ```bash
-   cd web/app/themes/template-test && gulp build
+   cd web/app/themes/{project-name} && npm run build
    ```
    
-   NOTE: This step is REQUIRED after any `.scss` or `.twig` changes. If `gulp watch` is already running, you may skip this step.
+   NOTE: This step is REQUIRED after any `.scss` or `.twig` changes. If `npm start` (watch mode) is already running, you may skip this step.
 
 
 ## 5. Create test page (if requested):
@@ -254,7 +258,7 @@ After user approves the module plan:
 If the user requests a test page with sample blocks:
 
 
-1. **Create PHP script** in `/web/app/themes/boilerplate/scripts/create-{module-name}-test-page.php`
+1. **Create PHP script** in `web/app/themes/{project-name}/scripts/create-{module-name}-test-page.php`
    - Generate unique block IDs for each block instance
    - Create proper block markup with ACF field structure
    - Use `update_field()` to save field data to database with correct keys
@@ -263,7 +267,7 @@ If the user requests a test page with sample blocks:
 
 2. **Execute the script** by running in terminal:
    ```bash
-   cd /home/kyro/projects/boilerplate && lando wp eval-file web/app/themes/boilerplate/scripts/{script-name}.php --path=web/wp
+   lando wp eval-file web/app/themes/{project-name}/scripts/{script-name}.php --path=web/wp
    ```
 
 
@@ -306,7 +310,7 @@ Research the requirements and codebase using read-only tools:
    - Text utilities (`uk-text-center`, `uk-text-uppercase`, etc.)
    - Spacing utilities (`uk-margin-*`, `uk-padding-*`)
 4. **Understand requirements**: Parse user prompt for field names, types, and block options.
-5. **Check registration patterns**: Review /modules/_module-template/register.php and functions.php for current conventions.
+5. **Check registration patterns**: Review `modules/*/block.json` and `modules/*/fields.json` files, `src/setup-acf-blocks-and-fields.php` (auto-registration), and `modules.php` (shared render template) for current ACF field group and render conventions.
 6. **Verify naming**: Ensure module name includes components and uses generic terminology.
 7. **Analyze dependencies**: Use #tool:search/usages to understand how modules are rendered and registered.
 8. **Check for issues**: Use SonarQube MCP to identify code smells or issues in module registration.
@@ -436,10 +440,10 @@ Figma Structure:
 │   │   ├── Card 1 (Component Instance)
 │   │   │   ├── Card Image (Image)
 │   │   │   ├── Card Title (Text)
-│   │   │   └── Card Description (Text)
+│   │   │   ├── Card Description (Text)
 │   │   ├── Card 2...
-│   │   └── Card 3...
-│   └── View All Button (Instance)
+│   │   ├── Card 3...
+│   ├── View All Button (Instance)
 
 
 Maps to:
@@ -517,14 +521,15 @@ Present modules to the user as follows:
 ### Module Files
 | File | Purpose |
 |------|---------|
-| register.php | Registers block and field group |
-| module.twig | Twig template for rendering |
-| _module.scss | Styles for the block |
-| module-preview.png | Optional preview image |
+| `modules/{module-name}/block.json` | Block registration (name, category, `renderTemplate`) |
+| `modules/{module-name}/module.twig` | Twig template for rendering |
+| `modules/{module-name}/_module.scss` | Styles for the block |
+| `modules/{module-name}/module-preview.png` | Optional block preview image in editor |
+| `modules/{module-name}/fields.json` | ACF field group (Content + Styles) |
 
 
 ### Generated Code
-{register.php, module.twig, _module.scss, and any other files as markdown code blocks}
+{block.json, module.twig, _module.scss, and fields.json as markdown code blocks}
 
 
 ### Considerations
@@ -553,6 +558,7 @@ Present modules to the user as follows:
   - Text fields: "Lorem ipsum..." placeholder text
   - Images: Proper placeholder images (check existing blocks for reference)
 - **No Tabs**: Do not create tab fields - use groups directly
+- **Timestamps**: Every ACF JSON field group file must include a `"modified"` field set to the current Unix timestamp (seconds since epoch). Run `date +%s` (or `Get-Date -UFormat %s` on Windows) to get the current value. Always update `"modified"` whenever a field group JSON is created or edited — never leave it as `0` or omit it.
 
 
 ## Recommended Field Names
@@ -567,12 +573,14 @@ Present modules to the user as follows:
 ## Twig Template Structure
 MANDATORY uniform wrapper:
 ```twig
-<div class="uk-width-1-1 [[module-name]] bg--{{ styles.background_color }}">
-    <div class="uk-width-1-1 content-wrapper">
+<div class="[[module-name]] uk-width-1-1 bg--{{ styles.background_color }} padding remove-{{ global.padding|join('-') }}">
+    <div class="content-wrapper">
         [[module code here]]
     </div>
 </div>
 ```
+
+The `global.padding` variable comes from the shared `block-global` ACF field group applied to all modules. It controls top/bottom padding removal and is always available in `$context['global']` via `modules.php`.
 
 
 **Template Rules - UIkit First**:
@@ -649,16 +657,16 @@ UIkit handles most styling. Custom SCSS should be:
 ```
 
 
-**IMPORTANT:** After any SCSS or Twig changes, run `gulp build` to compile assets:
+**IMPORTANT:** After any SCSS or Twig changes, run `npm run build` to compile assets:
 ```bash
-cd web/app/themes/template-test && gulp build
+cd web/app/themes/{project-name} && npm run build
 ```
-Or ensure `gulp watch` is running for automatic compilation.
+Or ensure `npm start` (watch mode) is running for automatic compilation.
 
 
 IMPORTANT: Follow these rules for module generation:
 - Match existing file structure and naming conventions in the project
-- Use only the registration and rendering patterns found in /modules/_module-template and functions.php
+- Use only the registration and rendering patterns found in existing `modules/*/block.json`, `modules/*/fields.json` files, and `modules.php`
 - Use Content and Styles field groups consistently
 - **UIkit-FIRST approach**: Always check UIkit classes before writing custom CSS
 - Use simple class names for custom hooks (NO BEM notation)
@@ -689,7 +697,7 @@ When the user requests a test page with sample blocks, generate a PHP script fol
 /**
  * Script to create a test page with {Module Name} blocks.
  *
- * Run with: lando php web/app/themes/template-test/scripts/create-{module-name}-test-page.php
+ * Run with: lando php web/app/themes/{project-name}/scripts/create-{module-name}-test-page.php
  *
  * @package Starter_Theme
  */
@@ -859,7 +867,7 @@ echo "View at: " . get_permalink( $page_id ) . "\n";
 8. **Generate Block IDs**: Use `wp_generate_password( 13, false )`
 9. **Page Creation**: Use `WP_Query` instead of deprecated `get_page_by_title()`
 10. **Error Handling**: Check `is_wp_error()` for post operations
-11. **Run Command**: `lando php web/app/themes/template-test/scripts/{script-name}.php`
+11. **Run Command**: `lando php web/app/themes/{project-name}/scripts/{script-name}.php`
 
 
 **Example Block Data Format in Gutenberg:**
